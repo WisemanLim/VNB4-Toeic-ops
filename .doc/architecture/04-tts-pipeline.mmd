@@ -1,0 +1,47 @@
+flowchart LR
+    subgraph AdminTrigger["관리자 트리거"]
+        Admin["Admin Web<br/>(Next.js)"]
+        Directus["Directus<br/>(콘텐츠 변경 hook)"]
+    end
+
+    subgraph APIQueue["enqueue"]
+        API2["backend/api<br/>POST /jobs/tts"]
+        Queue[("Redis / Valkey<br/>queue: tts.batch")]
+    end
+
+    subgraph Workers["backend/worker (Celery)"]
+        W1["tts_render<br/>(per word x locale)"]
+        W2["audio_normalize<br/>(loudness, trim)"]
+        W3["storage_upload<br/>(S3 multipart)"]
+        W4["db_update<br/>(audio_urls)"]
+    end
+
+    subgraph Providers["TTS Providers"]
+        Az["Azure Speech<br/>en-US/en-GB/en-AU"]
+        Pl["AWS Polly<br/>fallback"]
+        Pi["Piper<br/>(self-host, dev/staging)"]
+    end
+
+    subgraph Store["스토리지"]
+        S32["S3 / R2<br/>(prod)"]
+        Min["MinIO<br/>(local)"]
+        CDN2["CDN edge"]
+    end
+
+    Admin -- "단어/예문 publish" --> API2
+    Directus -- webhook --> API2
+    API2 --> Queue
+    Queue --> W1
+    W1 --> Az
+    W1 -. fallback .-> Pl
+    W1 -. dev .-> Pi
+    Az --> W1
+    Pl --> W1
+    Pi --> W1
+    W1 --> W2
+    W2 --> W3
+    W3 --> S32
+    W3 --> Min
+    S32 --> CDN2
+    W3 --> W4
+    W4 --> PG2[("PostgreSQL<br/>audio table")]

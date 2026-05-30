@@ -1,0 +1,103 @@
+flowchart TB
+    subgraph Clients["사용자 / 운영자 디바이스"]
+        direction LR
+        iPhone["iPhone / iPad<br/>(iOS 15+)"]
+        Android["Android phone / tablet<br/>(API 26+)"]
+        AdminWeb["Admin 브라우저<br/>(Chrome/Safari/Edge)"]
+        AdminDesktop["Admin 데스크탑<br/>(Tauri: Win/macOS/Linux)"]
+    end
+
+    subgraph Edge["엣지 계층"]
+        CDN["CDN<br/>(CloudFront / Cloudflare)"]
+        Caddy["Reverse Proxy<br/>Caddy (auto-TLS)"]
+    end
+
+    subgraph App["app/ — 사용자 모바일"]
+        RN["React Native + Expo<br/>TypeScript"]
+        LocalCache["expo-sqlite + MMKV<br/>(오프라인 단어 캐시)"]
+    end
+
+    subgraph FE["frontend/ — 관리자"]
+        NextAdmin["Next.js Admin (App Router)<br/>shadcn/ui + Refine"]
+        Tauri["Tauri Shell<br/>(Rust + WebView)"]
+        Directus["Directus CMS<br/>(콘텐츠 CRUD)"]
+        Appsmith["Appsmith<br/>(운영 패널)"]
+    end
+
+    subgraph BE["backend/"]
+        API["api/<br/>FastAPI + Pydantic v2<br/>+ SQLAlchemy 2"]
+        Worker["worker/<br/>Celery + Redis/Valkey"]
+        Auth["Auth Service<br/>Supabase Auth / Authentik"]
+    end
+
+    subgraph DB["database/"]
+        PG["PostgreSQL 16<br/>+ pgvector"]
+        Redis["Redis / Valkey<br/>(cache + queue)"]
+    end
+
+    subgraph Storage["오브젝트 스토리지"]
+        S3["S3 / R2 (prod)<br/>MinIO (local)"]
+    end
+
+    subgraph External["외부 SaaS"]
+        OAuth["OAuth Providers<br/>Google / Apple / Kakao"]
+        AzureTTS["Azure Speech TTS"]
+        PollyTTS["AWS Polly TTS"]
+        SentryS["Sentry"]
+        PostHog["PostHog Analytics"]
+    end
+
+    subgraph Ops["ops/"]
+        Compose["docker-compose<br/>(local + prod)"]
+        CI["GitHub Actions<br/>+ Expo EAS"]
+        Monitor["Prometheus + Grafana<br/>+ Loki + OpenTelemetry"]
+    end
+
+    iPhone --> CDN
+    Android --> CDN
+    AdminWeb --> Caddy
+    AdminDesktop --> Caddy
+
+    CDN --> Caddy
+    Caddy --> API
+    Caddy --> NextAdmin
+    Caddy --> Directus
+    Caddy --> Appsmith
+
+    RN -. dev .-> API
+    iPhone -. runtime .-> RN
+    Android -. runtime .-> RN
+    RN <--> LocalCache
+
+    NextAdmin --> API
+    Tauri --> NextAdmin
+    Directus --> PG
+    Appsmith --> PG
+    Appsmith --> API
+
+    API --> PG
+    API --> Redis
+    API --> Auth
+    API --> S3
+    API -- enqueue --> Worker
+    Worker --> PG
+    Worker --> S3
+    Worker --> AzureTTS
+    Worker --> PollyTTS
+
+    Auth --> OAuth
+    Auth --> PG
+
+    API -.-> SentryS
+    RN -.-> SentryS
+    RN -.-> PostHog
+    NextAdmin -.-> SentryS
+
+    Ops -. provisions .-> BE
+    Ops -. provisions .-> DB
+    Ops -. provisions .-> FE
+    CI -. builds .-> RN
+    CI -. builds .-> NextAdmin
+    CI -. builds .-> Tauri
+    Monitor -. scrapes .-> API
+    Monitor -. scrapes .-> Worker

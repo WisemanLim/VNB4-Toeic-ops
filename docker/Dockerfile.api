@@ -1,0 +1,28 @@
+FROM node:20-alpine AS deps
+WORKDIR /app
+RUN corepack enable && corepack prepare pnpm@9 --activate
+COPY VNB4-Toeic-backend/package.json VNB4-Toeic-backend/pnpm-workspace.yaml ./
+COPY VNB4-Toeic-backend/api/package.json ./api/
+COPY VNB4-Toeic-backend/shared/package.json ./shared/
+COPY VNB4-Toeic-database/package.json /db/package.json
+COPY VNB4-Toeic-database/prisma /db/prisma
+RUN pnpm install --frozen-lockfile=false
+
+FROM deps AS build
+COPY VNB4-Toeic-backend/api ./api
+COPY VNB4-Toeic-backend/shared ./shared
+WORKDIR /db
+RUN cd /app && pnpm --filter @vnb4-toeic/api exec prisma generate --schema=/db/prisma/schema.prisma
+WORKDIR /app
+RUN pnpm --filter @vnb4-toeic/api build
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+RUN corepack enable && corepack prepare pnpm@9 --activate
+COPY --from=build /app/api/dist ./dist
+COPY --from=build /app/api/node_modules ./node_modules
+COPY --from=build /app/api/package.json ./package.json
+COPY --from=build /db/prisma ./prisma
+EXPOSE 4000
+CMD ["node", "dist/main.js"]

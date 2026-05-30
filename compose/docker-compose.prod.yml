@@ -1,0 +1,80 @@
+name: vnb4-toeic-prod
+
+services:
+  # ---------------------------------------------------------------------------
+  # Self-hosted Postgres (DEFAULT for prod).
+  # External managed DB (RDS / Supabase / Neon)는 .env.prod 의 DATABASE_URL 만 외부
+  # 호스트로 바꾸고 본 블록은 주석 처리.
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-toeic_prod}
+      POSTGRES_USER: ${POSTGRES_USER:-toeic}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required in .env.prod}
+    env_file:
+      - path: ../env/.env.prod
+        required: false
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../../VNB4-Toeic-database/local/init.sql:/docker-entrypoint-initdb.d/00-init.sql:ro
+    expose: ["5432"]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER:-toeic}", "-d", "${POSTGRES_DB:-toeic_prod}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    image: ${REGISTRY:-ghcr.io/vnb4}/vnb4-api:${TAG:-latest}
+    restart: unless-stopped
+    env_file:
+      - path: ../env/.env.prod
+        required: false
+    depends_on:
+      postgres: {condition: service_healthy}
+      valkey:   {condition: service_started}
+    expose: ["4000"]
+
+  worker:
+    image: ${REGISTRY:-ghcr.io/vnb4}/vnb4-worker:${TAG:-latest}
+    restart: unless-stopped
+    env_file:
+      - path: ../env/.env.prod
+        required: false
+    depends_on:
+      postgres: {condition: service_healthy}
+      valkey:   {condition: service_started}
+
+  web:
+    image: ${REGISTRY:-ghcr.io/vnb4}/vnb4-web:${TAG:-latest}
+    restart: unless-stopped
+    env_file:
+      - path: ../env/.env.prod
+        required: false
+    expose: ["3000"]
+
+  valkey:
+    image: valkey/valkey:8-alpine
+    restart: unless-stopped
+    volumes: [valkey_data:/data]
+    command: ["valkey-server", "--appendonly", "yes"]
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ../caddy/Caddyfile.prod:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [api, web]
+
+volumes:
+  postgres_data:
+  valkey_data:
+  caddy_data:
+  caddy_config:

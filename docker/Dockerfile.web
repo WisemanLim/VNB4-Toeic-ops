@@ -1,0 +1,23 @@
+FROM node:20-alpine AS deps
+WORKDIR /app
+RUN corepack enable && corepack prepare pnpm@9 --activate
+COPY VNB4-Toeic-frontend/package.json VNB4-Toeic-frontend/pnpm-workspace.yaml ./
+COPY VNB4-Toeic-frontend/web/package.json ./web/
+COPY VNB4-Toeic-frontend/shared/package.json ./shared/
+RUN pnpm install --frozen-lockfile=false
+
+FROM deps AS build
+COPY VNB4-Toeic-frontend/web ./web
+COPY VNB4-Toeic-frontend/shared ./shared
+COPY VNB4-Toeic-backend/shared/src /backend-shared
+RUN pnpm --filter @vnb4-toeic/web build
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=build /app/web/.next ./.next
+COPY --from=build /app/web/public ./public
+COPY --from=build /app/web/node_modules ./node_modules
+COPY --from=build /app/web/package.json ./package.json
+EXPOSE 3000
+CMD ["node_modules/.bin/next", "start", "-p", "3000"]

@@ -1,0 +1,41 @@
+sequenceDiagram
+    autonumber
+    participant U as User (Mobile App)
+    participant App as app/ (RN+Expo)
+    participant Auth as backend/auth<br/>(Supabase Auth)
+    participant OAuth as Google / Apple / Kakao
+    participant API as backend/api
+    participant PG as database/postgres
+
+    rect rgb(235,245,255)
+    Note over U,OAuth: A) 소셜 로그인
+    U->>App: 카카오로 로그인 탭
+    App->>Auth: /auth/oauth/start?provider=kakao
+    Auth->>OAuth: redirect (PKCE)
+    OAuth-->>U: 동의 화면
+    U->>OAuth: 승인
+    OAuth-->>Auth: authorization code
+    Auth->>OAuth: token exchange
+    OAuth-->>Auth: id_token + access_token
+    Auth->>PG: upsert users + identities
+    Auth-->>App: app_jwt (access + refresh)
+    end
+
+    rect rgb(245,255,235)
+    Note over U,API: B) 이메일 + OTP
+    U->>App: email 입력
+    App->>Auth: /auth/email/otp/send
+    Auth->>Auth: code 발급 + 이메일 발송
+    Auth-->>App: pending
+    U->>App: 6자리 OTP 입력
+    App->>Auth: /auth/email/otp/verify
+    Auth->>PG: verify + upsert users
+    Auth-->>App: app_jwt
+    end
+
+    App->>API: GET /me  (Authorization: Bearer)
+    API->>Auth: verify jwt (JWKS)
+    Auth-->>API: claims (sub, email, scope)
+    API->>PG: select user_profile
+    PG-->>API: profile
+    API-->>App: 200 user

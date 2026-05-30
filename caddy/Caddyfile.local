@@ -1,0 +1,22 @@
+{
+  auto_https off
+}
+
+:80 {
+  encode gzip zstd
+
+  # API
+  handle_path /api/* {
+    reverse_proxy host.docker.internal:4000 {
+      header_up X-Forwarded-Host {host}
+    }
+  }
+
+  # MinIO public bucket (dev media)
+  handle_path /media/* {
+    reverse_proxy minio:9000
+  }
+
+  # Next.js admin
+  reverse_proxy host.docker.internal:3000
+}

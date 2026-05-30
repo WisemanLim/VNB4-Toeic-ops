@@ -1,0 +1,32 @@
+sequenceDiagram
+    autonumber
+    participant App as app/ (RN)
+    participant Cache as 로컬 SQLite + MMKV
+    participant CDN as CDN
+    participant API as backend/api
+    participant PG as PostgreSQL
+    participant S3 as Object Storage
+
+    App->>API: GET /lessons/today?user=u123
+    API->>PG: SELECT due cards (SRS) + lesson plan
+    PG-->>API: 20 cards
+    API-->>App: cards meta + audio urls
+
+    loop 각 단어 카드
+        App->>Cache: 캐시 hit?
+        alt 캐시 miss
+            App->>CDN: GET /audio/<id>-en-US.mp3
+            CDN->>S3: origin pull (first time)
+            S3-->>CDN: mp3
+            CDN-->>App: mp3 (edge cached)
+            App->>Cache: write blob + meta
+        end
+        App->>App: 재생 + 학습
+        App->>Cache: 결과 기록 (known/unknown)
+    end
+
+    App->>API: POST /progress/batch<br/>[{card_id, result, latency_ms}, ...]
+    API->>PG: INSERT progress + UPDATE SRS schedule
+    PG-->>API: ok
+    API->>PG: recompute mastery + next_review_at
+    API-->>App: 200 + next lesson preview

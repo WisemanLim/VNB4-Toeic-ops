@@ -1,0 +1,40 @@
+# =============================================================================
+# VNB4-Toeic-ops — 메타 repo (Docker + Caddy + CI + 시험)
+# =============================================================================
+
+# Env (prod secrets 절대 커밋 금지)
+.env
+.env.prod
+.env.prod.managed
+env/.env.prod
+env/.env.prod.managed
+!env/.env.local
+!*.example
+
+# Test harness 산출물
+test/logs/
+test/.tmp/
+
+# License report (auto-generated)
+THIRD_PARTY_NOTICES.md
+
+# Docker / compose temp
+*.pid
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# Logs
+*.log
+
+# AI/agent tooling temp (oh-my-claudecode, gstack, code-review)
+.omc/
+.gstack/
+.review/
+.claude/
+*.tmp

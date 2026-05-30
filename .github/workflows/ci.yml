@@ -1,0 +1,92 @@
+# ============================================================================
+# CI DISABLED — 2026-05-21
+# ----------------------------------------------------------------------------
+# 이 워크플로우는 현재 비활성화 상태입니다.
+# GitHub Actions는 push/pull_request 트리거를 발견하지 못하면 실행하지 않으므로
+# `on:` 블록이 주석 처리된 동안에는 어떤 잡도 실행되지 않습니다.
+#
+# 재활성화 방법:
+#   1) 본 파일 36줄 이하 `# ORIGINAL CONTENT BELOW` 블록의 각 라인 앞 `# `를 제거
+#      (또는 sed: `sed -i '' 's/^# //' .github/workflows/ci.yml` — DISABLED 헤더는
+#       파일 상단을 잘라낸 후 실행할 것)
+#   2) ops/ci/github-actions-ci.yml 도 동일하게 복원하여 두 파일을 sync
+#   3) 첫 PR/push로 정상 동작 확인
+#
+# 비활성화 이유: 본 시점 외부 CI 러너 사용 보류. 로컬 검증은
+# `VNB4-Toeic-app/test/run-tests.sh` 등 컴포넌트별 스크립트로 대체.
+# ============================================================================
+
+name: ci-disabled
+on:
+  workflow_dispatch: {}   # 수동 트리거 자리만 남김. 잡 정의는 아래 주석 안에 보존.
+
+jobs:
+  noop:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "CI disabled — restore .github/workflows/ci.yml to re-enable."
+
+# ============================================================================
+# ORIGINAL CONTENT BELOW (commented out — restore by stripping leading '# ')
+# ----------------------------------------------------------------------------
+# # Canonical CI workflow. Mirrors VNB4-Toeic-ops/ci/github-actions-ci.yml.
+# # GH Actions requires this path (.github/workflows/), so we duplicate. Keep in sync.
+# name: ci
+# on:
+#   push:
+#     branches: [main]
+#   pull_request: {}
+#
+# jobs:
+#   backend:
+#     runs-on: ubuntu-latest
+#     services:
+#       postgres:
+#         image: pgvector/pgvector:pg16
+#         env:
+#           POSTGRES_DB: toeic_ci
+#           POSTGRES_USER: ci
+#           POSTGRES_PASSWORD: ci
+#         ports: ["5432:5432"]
+#         options: --health-cmd="pg_isready -U ci" --health-interval=5s
+#       valkey:
+#         image: valkey/valkey:8-alpine
+#         ports: ["6379:6379"]
+#     steps:
+#       - uses: actions/checkout@v4
+#       - uses: pnpm/action-setup@v4
+#         with: { version: 9 }
+#       - uses: actions/setup-node@v4
+#         with: { node-version: 20, cache: pnpm }
+#       - name: db install + migrate
+#         working-directory: VNB4-Toeic-database
+#         env: { DATABASE_URL: "postgres://ci:ci@localhost:5432/toeic_ci" }
+#         run: pnpm install && pnpm prisma migrate deploy
+#       - name: backend install + build
+#         working-directory: VNB4-Toeic-backend
+#         run: pnpm install && pnpm -r build
+#
+#   frontend:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v4
+#       - uses: pnpm/action-setup@v4
+#         with: { version: 9 }
+#       - uses: actions/setup-node@v4
+#         with: { node-version: 20, cache: pnpm }
+#       - working-directory: VNB4-Toeic-frontend
+#         run: pnpm install
+#       - working-directory: VNB4-Toeic-frontend/web
+#         run: pnpm typecheck && pnpm build
+#
+#   app:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v4
+#       - uses: pnpm/action-setup@v4
+#         with: { version: 9 }
+#       - uses: actions/setup-node@v4
+#         with: { node-version: 20, cache: pnpm }
+#       - working-directory: VNB4-Toeic-app
+#         run: pnpm install && pnpm typecheck
+# ============================================================================

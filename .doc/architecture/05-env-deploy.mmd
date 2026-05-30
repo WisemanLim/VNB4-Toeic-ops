@@ -1,0 +1,57 @@
+flowchart TB
+    subgraph LocalEnv["LOCAL (개발자 머신)"]
+        direction TB
+        LocalCompose["docker-compose.local.yml"]
+        LocalPG["postgres:16 (volume)"]
+        LocalRedis["valkey:8"]
+        LocalMinIO["MinIO"]
+        LocalAPI["api (uvicorn --reload)"]
+        LocalNext["Next.js dev (pnpm dev)"]
+        LocalExpo["Expo dev client"]
+        LocalPiper["Piper TTS<br/>(자체호스팅)"]
+        LocalCompose --> LocalPG
+        LocalCompose --> LocalRedis
+        LocalCompose --> LocalMinIO
+        LocalCompose --> LocalAPI
+        LocalCompose --> LocalPiper
+    end
+
+    subgraph ProdEnv["PROD (운영)"]
+        direction TB
+        ProdLB["Caddy + CDN"]
+        ProdAPI["api (gunicorn x N)"]
+        ProdWorker["celery worker (autoscale)"]
+        ProdPG[("Postgres (RDS / Supabase)<br/>+ daily backup")]
+        ProdRedis[("ElastiCache / Upstash")]
+        ProdS3[("S3 / R2 + CloudFront")]
+        ProdAzure["Azure Speech (live)"]
+        ProdPolly["AWS Polly (live)"]
+        ProdLB --> ProdAPI
+        ProdAPI --> ProdPG
+        ProdAPI --> ProdRedis
+        ProdAPI --> ProdS3
+        ProdAPI --> ProdWorker
+        ProdWorker --> ProdAzure
+        ProdWorker --> ProdPolly
+    end
+
+    subgraph CICD["CI / CD"]
+        GA["GitHub Actions"]
+        EAS["Expo EAS Build"]
+        Tauri2["Tauri release"]
+        Alembic["Alembic migrate<br/>(manual approval gate)"]
+    end
+
+    Dev["개발자 git push"] --> GA
+    GA -- build & push --> Reg["GHCR / ECR images"]
+    Reg --> ProdAPI
+    Reg --> ProdWorker
+    GA --> EAS
+    EAS --> TestFlight["TestFlight"]
+    EAS --> PlayInt["Play Internal"]
+    GA --> Tauri2
+    Tauri2 --> Releases["GitHub Releases"]
+    GA --> Alembic
+    Alembic --> ProdPG
+
+    LocalEnv -. promote schema .-> Alembic

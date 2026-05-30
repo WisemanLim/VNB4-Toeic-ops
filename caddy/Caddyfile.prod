@@ -1,0 +1,20 @@
+# Auto-HTTPS via Let's Encrypt. License: Apache-2.0.
+{
+  email ops@example.com
+}
+
+api.example.com {
+  encode gzip zstd
+  reverse_proxy api:4000
+}
+
+admin.example.com {
+  encode gzip zstd
+  reverse_proxy web:3000
+}
+
+# Optional media CDN front (recommend Cloudflare R2 with direct domain instead)
+media.example.com {
+  encode gzip
+  reverse_proxy minio:9000
+}

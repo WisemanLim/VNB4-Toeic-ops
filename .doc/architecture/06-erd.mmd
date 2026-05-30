@@ -1,0 +1,93 @@
+erDiagram
+    USER ||--o{ IDENTITY : has
+    USER ||--o{ PROGRESS : tracks
+    USER ||--o{ NOTE : writes
+    USER ||--o{ ENROLLMENT : enrolls
+    CURRICULUM ||--o{ LESSON : contains
+    LESSON ||--o{ LESSON_WORD : includes
+    WORD ||--o{ LESSON_WORD : appears_in
+    WORD ||--o{ EXAMPLE : has
+    EXAMPLE ||--o{ AUDIO : rendered_as
+    WORD ||--o{ PROGRESS : reviewed_in
+    ENROLLMENT }o--|| CURRICULUM : on
+
+    USER {
+      uuid id PK
+      string email
+      string display_name
+      timestamp created_at
+    }
+    IDENTITY {
+      uuid id PK
+      uuid user_id FK
+      string provider
+      string provider_uid
+    }
+    WORD {
+      string id PK
+      int part
+      string word
+      string pos
+      string ipa
+      string pron_ko
+      string meaning_ko
+      int frequency_tier
+      string[] topic
+    }
+    EXAMPLE {
+      uuid id PK
+      string word_id FK
+      text example_en
+      text example_ko
+    }
+    AUDIO {
+      uuid id PK
+      uuid example_id FK
+      string locale
+      string provider
+      string voice_id
+      string url
+      int duration_ms
+    }
+    LESSON {
+      uuid id PK
+      uuid curriculum_id FK
+      int seq
+      string title
+      jsonb objectives
+    }
+    LESSON_WORD {
+      uuid lesson_id FK
+      string word_id FK
+      int seq
+    }
+    CURRICULUM {
+      uuid id PK
+      string name
+      int target_score
+      int duration_days
+    }
+    ENROLLMENT {
+      uuid id PK
+      uuid user_id FK
+      uuid curriculum_id FK
+      date exam_date
+      date start_date
+    }
+    PROGRESS {
+      uuid id PK
+      uuid user_id FK
+      string word_id FK
+      int srs_state
+      int interval_days
+      timestamp next_review_at
+      timestamp last_reviewed_at
+      smallint result
+    }
+    NOTE {
+      uuid id PK
+      uuid user_id FK
+      string word_id FK
+      text body_md
+      string[] tags
+    }

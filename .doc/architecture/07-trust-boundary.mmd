@@ -1,0 +1,40 @@
+flowchart LR
+    subgraph Untrusted["Untrusted Zone"]
+        Web["Public Internet"]
+        Mob["Mobile devices"]
+    end
+
+    subgraph DMZ["DMZ"]
+        CDN3["CDN edge"]
+        CaddyB["Caddy reverse proxy<br/>(WAF rules, TLS 1.3)"]
+    end
+
+    subgraph AppZone["App Zone (private subnet)"]
+        APIB["FastAPI (JWT verify)"]
+        WorkerB["Celery worker"]
+    end
+
+    subgraph DataZone["Data Zone (private, no internet)"]
+        PGB[("Postgres<br/>row-level-security")]
+        RedisB[("Redis/Valkey<br/>AUTH + TLS")]
+        S3B[("Object Storage<br/>presigned URLs only")]
+    end
+
+    Web --> CDN3
+    Mob --> CDN3
+    CDN3 --> CaddyB
+    CaddyB -- mTLS optional --> APIB
+    APIB --> PGB
+    APIB --> RedisB
+    APIB -- presign --> S3B
+    WorkerB --> PGB
+    WorkerB --> S3B
+
+    classDef ut fill:#fde2e2,stroke:#b33;
+    classDef dmz fill:#fff4d6,stroke:#aa7;
+    classDef app fill:#dff0d8,stroke:#393;
+    classDef data fill:#d6e6ff,stroke:#36c;
+    class Untrusted ut
+    class DMZ dmz
+    class AppZone app
+    class DataZone data

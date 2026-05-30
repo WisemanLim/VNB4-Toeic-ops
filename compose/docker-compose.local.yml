@@ -1,0 +1,79 @@
+name: vnb4-toeic-local
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: vnb4_postgres
+    environment:
+      POSTGRES_DB: toeic_local
+      POSTGRES_USER: toeic
+      POSTGRES_PASSWORD: toeic
+    ports: ["5432:5432"]
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../../VNB4-Toeic-database/local/init.sql:/docker-entrypoint-initdb.d/00-init.sql:ro
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "toeic", "-d", "toeic_local"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Valkey replaces Redis 7.4+ (RSALv2 license) — BSD-3 fork by Linux Foundation
+  valkey:
+    image: valkey/valkey:8-alpine
+    container_name: vnb4_valkey
+    ports: ["6379:6379"]
+    volumes:
+      - valkey_data:/data
+    command: ["valkey-server", "--appendonly", "yes"]
+
+  minio:
+    image: quay.io/minio/minio:latest
+    container_name: vnb4_minio
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+
+  minio-bucket-init:
+    image: quay.io/minio/mc:latest
+    depends_on: [minio]
+    entrypoint: >
+      /bin/sh -c "
+      sleep 3 &&
+      mc alias set local http://minio:9000 minioadmin minioadmin &&
+      mc mb --ignore-existing local/toeic-media &&
+      mc anonymous set download local/toeic-media
+      "
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: vnb4_caddy
+    ports:
+      - "80:80"
+    volumes:
+      - ../caddy/Caddyfile.local:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - postgres
+      - valkey
+
+  # Optional dev: Piper TTS (OSS fallback)
+  # piper:
+  #   image: rhasspy/wyoming-piper:latest
+  #   container_name: vnb4_piper
+  #   command: ["--voice", "en_US-amy-medium"]
+  #   ports: ["5000:10200"]
+
+volumes:
+  postgres_data:
+  valkey_data:
+  minio_data:
+  caddy_data:
+  caddy_config:
