@@ -132,7 +132,7 @@ Docker 불필요. database 컴포넌트만 SQLite 로 띄움. 다른 컴포넌�
 cd VNB4-Toeic-database
 pnpm install
 pnpm migrate:local    # .env.local 자동생성 + prisma db push (SQLite)
-pnpm seed             # seeds/parts/*.json → SQLite upsert (≈96 단어)
+pnpm seed             # seeds/parts/*.json → SQLite upsert (≈3,700 단어)
 pnpm studio           # Prisma Studio (SQLite)
 ```
 
@@ -408,7 +408,7 @@ make docker-down       # 정지 (볼륨 유지)
 | **DB / Seed** | `migrate-local` | SQLite `db push` + client gen |
 | | `migrate-dev` | PostgreSQL `migrate dev` (TTY 필요) |
 | | `migrate-prod` | PostgreSQL `migrate deploy` |
-| | `seed`, `seed-prod` | 시드 데이터(~1,900단어) 임포트 |
+| | `seed`, `seed-prod` | 시드 데이터(≈3,700단어) 임포트 |
 | | `studio` | Prisma Studio (SQLite) |
 | **Build** | `build` | api + worker + web 이미지 빌드 |
 | | `build-api`, `build-worker`, `build-web` | 개별 빌드. `REGISTRY=ghcr.io/foo TAG=v1.2.3` 오버라이드 가능 |
@@ -435,17 +435,18 @@ REGISTRY=ghcr.io/your-org TAG=v1.0.0 make build
 
 ### 8.4 컴포넌트 경로 변수
 
-| 변수 | 기본값 |
-|---|---|
-| `DB` | `../VNB4-Toeic-database` |
-| `BACKEND` | `../VNB4-Toeic-backend` |
-| `FRONTEND` | `../VNB4-Toeic-frontend` |
-| `APP` | `/Users/wise/Developer/Apps(Android,iOS,...)/VNB4-Toeic-app` (절대경로, 괄호 포함) |
-| `COMPOSE_LOCAL` | `compose/docker-compose.local.yml` |
-| `COMPOSE_PROD` | `compose/docker-compose.prod.yml` |
-| `ENV_PROD` | `env/.env.prod` |
+| 변수 | 기본값 (해석 방식) | env 오버라이드 |
+|---|---|---|
+| `DB_DIR` | `$(REPO_ROOT)/VNB4-Toeic-database` (존재 시) | `VNB4_DB_DIR` |
+| `BACKEND_DIR` | `$(REPO_ROOT)/VNB4-Toeic-backend` (존재 시) | `VNB4_BACKEND_DIR` |
+| `FRONTEND_DIR` | `$(REPO_ROOT)/VNB4-Toeic-frontend` (존재 시) | `VNB4_FRONTEND_DIR` |
+| `APP_DIR` | 후보 경로 중 첫 존재 디렉토리 (`$(REPO_ROOT)/VNB4-Toeic-app`, `/opt/vnb4-app`, `$(HOME)/Developer/Apps(Android,iOS,...)/VNB4-Toeic-app` 등) — 부재 시 graceful skip | `VNB4_APP_DIR` |
+| `COMPOSE_LOCAL` | `compose/docker-compose.local.yml` | — |
+| `COMPOSE_PROD` | `compose/docker-compose.prod.yml` | — |
+| `ENV_PROD` | `env/.env.prod` | — |
+| `REGISTRY` / `TAG` | `ghcr.io/vnb4` / `latest` | cli 오버라이드 |
 
-`APP` 경로의 괄호 문자 때문에 Makefile 내부에서 `"$(APP)"` 처럼 따옴표로 감싸 처리됨.
+`REPO_ROOT` 은 Makefile 위치(ops 디렉토리)의 부모. 컴포넌트 경로는 절대경로 하드코딩 없이 sibling 디렉토리에서 자동 해석되며, `VNB4_*_DIR` 환경변수로 오버라이드 가능. `APP_DIR` 은 부재해도 관련 타겟이 skip 처리됨(모바일은 dev 머신에서만 운영). `make info` 로 해석된 경로 확인.
 
 ---
 

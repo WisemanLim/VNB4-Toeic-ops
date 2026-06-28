@@ -132,7 +132,7 @@ No Docker needed. Only the database component runs on SQLite. The other componen
 cd VNB4-Toeic-database
 pnpm install
 pnpm migrate:local    # auto-generates .env.local + prisma db push (SQLite)
-pnpm seed             # seeds/parts/*.json → SQLite upsert (≈96 words)
+pnpm seed             # seeds/parts/*.json → SQLite upsert (≈3,700 words)
 pnpm studio           # Prisma Studio (SQLite)
 ```
 
@@ -408,7 +408,7 @@ make docker-down       # stop (keep volumes)
 | **DB / Seed** | `migrate-local` | SQLite `db push` + client gen |
 | | `migrate-dev` | PostgreSQL `migrate dev` (needs TTY) |
 | | `migrate-prod` | PostgreSQL `migrate deploy` |
-| | `seed`, `seed-prod` | import seed data (~1,900 words) |
+| | `seed`, `seed-prod` | import seed data (≈3,700 words) |
 | | `studio` | Prisma Studio (SQLite) |
 | **Build** | `build` | build api + worker + web images |
 | | `build-api`, `build-worker`, `build-web` | individual builds. Can override `REGISTRY=ghcr.io/foo TAG=v1.2.3` |
@@ -435,17 +435,18 @@ REGISTRY=ghcr.io/your-org TAG=v1.0.0 make build
 
 ### 8.4 Component path variables
 
-| Variable | Default |
-|---|---|
-| `DB` | `../VNB4-Toeic-database` |
-| `BACKEND` | `../VNB4-Toeic-backend` |
-| `FRONTEND` | `../VNB4-Toeic-frontend` |
-| `APP` | `/Users/wise/Developer/Apps(Android,iOS,...)/VNB4-Toeic-app` (absolute path, includes parentheses) |
-| `COMPOSE_LOCAL` | `compose/docker-compose.local.yml` |
-| `COMPOSE_PROD` | `compose/docker-compose.prod.yml` |
-| `ENV_PROD` | `env/.env.prod` |
+| Variable | Default (resolution) | env override |
+|---|---|---|
+| `DB_DIR` | `$(REPO_ROOT)/VNB4-Toeic-database` (if present) | `VNB4_DB_DIR` |
+| `BACKEND_DIR` | `$(REPO_ROOT)/VNB4-Toeic-backend` (if present) | `VNB4_BACKEND_DIR` |
+| `FRONTEND_DIR` | `$(REPO_ROOT)/VNB4-Toeic-frontend` (if present) | `VNB4_FRONTEND_DIR` |
+| `APP_DIR` | first existing dir among candidates (`$(REPO_ROOT)/VNB4-Toeic-app`, `/opt/vnb4-app`, `$(HOME)/Developer/Apps(Android,iOS,...)/VNB4-Toeic-app`, etc.) — graceful skip if absent | `VNB4_APP_DIR` |
+| `COMPOSE_LOCAL` | `compose/docker-compose.local.yml` | — |
+| `COMPOSE_PROD` | `compose/docker-compose.prod.yml` | — |
+| `ENV_PROD` | `env/.env.prod` | — |
+| `REGISTRY` / `TAG` | `ghcr.io/vnb4` / `latest` | cli override |
 
-Because of the parenthesis characters in the `APP` path, it is wrapped in quotes inside the Makefile like `"$(APP)"`.
+`REPO_ROOT` is the parent of the Makefile's location (the ops directory). Component paths are resolved automatically from sibling directories with no hardcoded absolute paths, and can be overridden via the `VNB4_*_DIR` environment variables. `APP_DIR` is optional — related targets are skipped if it is absent (mobile is operated only on dev machines). Run `make info` to see the resolved paths.
 
 ---
 

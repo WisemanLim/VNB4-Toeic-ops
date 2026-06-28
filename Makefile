@@ -89,7 +89,7 @@ help:
 	@echo "  make migrate-local     SQLite db push + client gen"
 	@echo "  make migrate-dev       PostgreSQL migrate dev (TTY 필요)"
 	@echo "  make migrate-prod      PostgreSQL migrate deploy"
-	@echo "  make seed              SQLite 시드 (~1,900 단어)"
+	@echo "  make seed              SQLite 시드 (≈3,700 단어)"
 	@echo "  make seed-prod         PostgreSQL 시드"
 	@echo "  make studio            Prisma Studio (SQLite)"
 	@echo ""
